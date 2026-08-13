@@ -1,6 +1,7 @@
-siemlet
+/siemlet
 *.db
 *.sqlite
 .env
 dist/
 .DS_Store
+.claude/

@@ -1,0 +1,6 @@
+siemlet
+*.db
+*.sqlite
+.env
+dist/
+.DS_Store

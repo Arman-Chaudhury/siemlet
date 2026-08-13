@@ -1,0 +1,37 @@
+# siemlet detection rules — target shape for the YAML rule-config milestone.
+# Only ssh-brute-force is wired up today (hardcoded in cmd/siemlet); this file
+# documents the intended schema for all five default rules.
+
+rules:
+  - name: ssh-brute-force
+    kinds: [auth_fail, invalid_user]
+    key: ip            # window is tracked per source IP
+    threshold: 5
+    window: 2m
+
+  - name: password-spray
+    kinds: [auth_fail, invalid_user]
+    key: ip
+    distinct: user     # count distinct usernames, not raw events
+    threshold: 5
+    window: 10m
+
+  - name: sudo-after-failures
+    sequence:          # fire when a sudo_command follows >=3 auth_fails
+      - kinds: [auth_fail]
+        threshold: 3
+        window: 10m
+      - kinds: [sudo_command]
+    key: user
+
+  - name: new-user-created
+    kinds: [user_added]
+    threshold: 1
+    window: 1s
+
+  - name: off-hours-root
+    kinds: [auth_success]
+    user: root
+    outside_hours: "08:00-20:00"
+    threshold: 1
+    window: 1s

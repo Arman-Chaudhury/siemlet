@@ -118,6 +118,11 @@ func classify(ev *Event, msg string) {
 	}
 }
 
+// ClassifyMessage classifies a bare message body (no syslog framing) into ev.
+// Sources that provide their own framing (e.g. journald) fill in Time, Host,
+// Program, and PID themselves and use this for the message body only.
+func ClassifyMessage(ev *Event, msg string) { classify(ev, msg) }
+
 // matchInto runs re against msg and, on a hit, hands the submatches to fn.
 func matchInto(re *regexp.Regexp, msg string, fn func([]string)) bool {
 	g := re.FindStringSubmatch(msg)

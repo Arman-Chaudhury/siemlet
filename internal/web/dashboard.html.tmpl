@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="10">
+<title>siemlet — {{.Hostname}}</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: #101418; color: #d8dee6;
+    font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: 2rem 3vw; max-width: 72rem; margin: 0 auto;
+  }
+  h1 { font-size: 1.2rem; margin-bottom: .25rem; }
+  h1 span { color: #6ee7a0; }
+  .sub { color: #7d8794; margin-bottom: 1.5rem; }
+  .tiles { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
+  .tile {
+    background: #171d24; border: 1px solid #232b35; border-radius: 8px;
+    padding: .75rem 1.25rem; min-width: 9rem;
+  }
+  .tile b { display: block; font-size: 1.5rem; color: #e8edf3; }
+  .tile.alerts b { color: #ff7a6b; }
+  .tile small { color: #7d8794; }
+  h2 { font-size: .95rem; color: #9aa7b4; margin: 1.5rem 0 .5rem;
+       text-transform: uppercase; letter-spacing: .08em; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: .35rem .75rem .35rem 0; vertical-align: top; }
+  th { color: #7d8794; font-weight: normal; border-bottom: 1px solid #232b35; }
+  td.rule { color: #ff7a6b; white-space: nowrap; }
+  td.key  { color: #7cc0ff; }
+  td.when { color: #7d8794; white-space: nowrap; }
+  td.detail { color: #9aa7b4; word-break: break-all; }
+  .empty { color: #566270; padding: 1rem 0; }
+  .bar { display: inline-block; height: .6rem; background: #ff7a6b33;
+         border: 1px solid #ff7a6b66; border-radius: 3px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<h1><span>siemlet</span> — {{.Hostname}}</h1>
+<div class="sub">up {{.Uptime}} · {{.RuleCount}} rules loaded · refreshes every 10s</div>
+
+<div class="tiles">
+  <div class="tile"><b>{{.Totals.Events}}</b><small>events stored</small></div>
+  <div class="tile alerts"><b>{{.Totals.Alerts}}</b><small>alerts fired</small></div>
+</div>
+
+<h2>Recent alerts</h2>
+{{if .Alerts}}
+<table>
+  <tr><th>when (UTC)</th><th>rule</th><th>key</th><th>count</th><th>last line</th></tr>
+  {{range .Alerts}}
+  <tr>
+    <td class="when">{{.Time.UTC.Format "2006-01-02 15:04:05"}}</td>
+    <td class="rule">{{.Rule}}</td>
+    <td class="key">{{.Key}}</td>
+    <td>{{.Count}}</td>
+    <td class="detail">{{.Detail}}</td>
+  </tr>
+  {{end}}
+</table>
+{{else}}<div class="empty">no alerts yet — quiet is good</div>{{end}}
+
+<h2>Top offender IPs (24h)</h2>
+{{if .Offenders}}
+<table>
+  <tr><th>source ip</th><th>auth failures</th><th></th></tr>
+  {{range .Offenders}}
+  <tr>
+    <td class="key">{{.IP}}</td>
+    <td>{{.Failures}}</td>
+    <td><span class="bar" style="width:{{barWidth .Failures}}px"></span></td>
+  </tr>
+  {{end}}
+</table>
+{{else}}<div class="empty">no auth failures recorded in the last 24h</div>{{end}}
+</body>
+</html>

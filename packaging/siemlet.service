@@ -1,0 +1,36 @@
+# systemd unit for siemlet. Install:
+#   sudo cp siemlet /usr/local/bin/
+#   sudo mkdir -p /var/lib/siemlet /etc/siemlet
+#   sudo cp configs/rules.example.yaml /etc/siemlet/rules.yaml
+#   sudo cp packaging/siemlet.service /etc/systemd/system/
+#   sudo systemctl enable --now siemlet
+[Unit]
+Description=siemlet — SIEM-lite for small Linux fleets
+Documentation=https://github.com/Arman-Chaudhury/siemlet
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/siemlet serve \
+    --rules /etc/siemlet/rules.yaml \
+    --db /var/lib/siemlet/siemlet.db \
+    --checkpoint-dir /var/lib/siemlet \
+    --listen 127.0.0.1:8080 \
+    /var/log/auth.log
+Restart=on-failure
+RestartSec=5
+
+# Least privilege: reading /var/log needs the adm group on Debian/Ubuntu.
+DynamicUser=yes
+SupplementaryGroups=adm
+StateDirectory=siemlet
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

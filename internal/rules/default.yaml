@@ -1,0 +1,33 @@
+# siemlet stock detection rules — embedded into the binary as the default set.
+# configs/rules.example.yaml mirrors this file with schema documentation.
+rules:
+  - name: ssh-brute-force
+    kinds: [auth_fail, invalid_user]
+    key: ip
+    threshold: 5
+    window: 2m
+
+  - name: password-spray
+    kinds: [auth_fail, invalid_user]
+    key: ip
+    distinct: user
+    threshold: 5
+    window: 10m
+
+  - name: sudo-after-failures
+    key: user
+    sequence:
+      - kinds: [auth_fail]
+        threshold: 3
+        window: 10m
+      - kinds: [sudo_command]
+
+  - name: new-user-created
+    kinds: [user_added]
+    threshold: 1
+
+  - name: off-hours-root
+    kinds: [auth_success]
+    user: root
+    outside_hours: "08:00-20:00"
+    threshold: 1

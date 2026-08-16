@@ -1,0 +1,23 @@
+# Demo stack: siemlet watching a log that `loggen` writes realistic traffic
+# (including periodic attack bursts) into. Dashboard: http://127.0.0.1:8080
+services:
+  siemlet:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - logs:/logs
+      - data:/data
+    depends_on:
+      - loggen
+
+  loggen:
+    image: alpine:3.20
+    command: sh /loggen.sh /logs/auth.log
+    volumes:
+      - logs:/logs
+      - ./scripts/loggen.sh:/loggen.sh:ro
+
+volumes:
+  logs:
+  data:

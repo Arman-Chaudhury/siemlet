@@ -4,40 +4,45 @@
 > runs sliding-window detection rules, and raises alerts through a web
 > dashboard, webhooks, and Prometheus metrics.
 
+All milestones landed; this file stays as the build record.
+
 ## Milestones
 
-- [x] **Structured parsing** — Turn raw sshd/sudo/PAM syslog lines into typed
-  events (user, source IP, port, kind). Table-driven regex parser with tests.
-  *(seed — implemented in `internal/parse`)*
-- [x] **Sliding-window detection core** — Per-key (IP, user) event windows with
-  a threshold rule; first rule: SSH brute force. *(seed — implemented in
-  `internal/detect`)*
-- [ ] **Log follower** — `tail -F`-style follower with log-rotation handling
-  and a checkpoint file so restarts never double-ingest or drop lines; optional
-  `journalctl -o json -f` source.
-- [ ] **YAML rule config** — Load `configs/rules.example.yaml`-shaped rules
-  (threshold, window, key, event kinds) into the detection engine; ship the
-  five default rules (brute force, password spray, sudo-after-failures,
-  new-user-created, off-hours-root).
-- [ ] **SQLite store** — Persist events and alerts (`modernc.org/sqlite`, no
-  cgo, single static binary); retention sweep.
-- [ ] **Alert sinks** — Generic webhook POST (Slack-compatible) with dedup and
-  rate limiting.
-- [ ] **Web dashboard + metrics** — Embedded HTML dashboard (`html/template` +
-  `embed`, no Node build) showing recent alerts/top offender IPs; Prometheus
-  `/metrics` endpoint (events ingested, alerts fired, per-rule counters).
-- [ ] **Ops hardening** — Dockerfile (scratch image), docker-compose demo with
-  a sample log generator, systemd unit, and a `siemlet replay` command to run
-  rules over historical logs.
+- [x] **Structured parsing** — Typed events (user, source IP, port, kind) from
+  raw sshd/sudo/PAM/useradd syslog lines. Table-driven regex parser with tests.
+  (`internal/parse`)
+- [x] **Sliding-window detection core** — Per-key event windows with threshold,
+  distinct-value counting, user filters, off-hours schedules, and two-stage
+  sequence rules; memory bounded by periodic sweeps. (`internal/detect`)
+- [x] **Log follower** — `tail -F`-style follower handling rotation,
+  truncation, late-appearing files, and partial lines, with atomic checkpoint
+  files so restarts never double-ingest or drop lines; journald source via
+  `journalctl -f -o json`. (`internal/follow`)
+- [x] **YAML rule config** — `configs/rules.example.yaml` schema compiled into
+  the engine with validation; the five default rules ship embedded in the
+  binary. (`internal/rules`)
+- [x] **SQLite store** — Events and alerts persisted via `modernc.org/sqlite`
+  (no cgo, static binary), WAL mode, retention sweep. (`internal/store`)
+- [x] **Alert sinks** — Slack-compatible webhook POST with per-(rule, key)
+  dedup, global rate limiting, and retry-friendly failure handling.
+  (`internal/sink`)
+- [x] **Web dashboard + metrics** — Embedded `html/template` dashboard (recent
+  alerts, top offender IPs, totals), `/api/alerts` JSON, `/healthz`, and a
+  dependency-free Prometheus `/metrics` endpoint. (`internal/web`,
+  `internal/metrics`)
+- [x] **Ops hardening** — `scratch` Dockerfile, docker-compose demo with a
+  sample log generator, hardened systemd unit, and a `siemlet replay` command
+  for historical logs. (`Dockerfile`, `docker-compose.yml`, `packaging/`)
 
 ## Architecture
 
 One process per host. A follower goroutine per source feeds a parse stage; the
-detection engine holds per-rule, per-key ring buffers of recent event
-timestamps (memory bounded by window size × active keys, not log volume).
-Alerts fan out to the store and sinks over channels. The HTTP server (dashboard
-+ metrics) reads the store only — detection never blocks on I/O. Everything
-compiles to a single static Go binary; SQLite is the only state.
+detection engine holds per-rule, per-key windows of recent event timestamps
+(memory bounded by window size × active keys, not log volume). A single
+consumer goroutine runs detection and owns all SQLite writes, so rules need no
+locks. Alerts fan out to the store, webhook, and metrics. The HTTP server
+(dashboard + metrics) reads the store only — detection never blocks on I/O.
+Everything compiles to a single static Go binary; SQLite is the only state.
 
 Non-goals: multi-host aggregation server, agents/collectors, TLS termination,
 log shipping. This is deliberately the "one box, one binary" tier below Wazuh.

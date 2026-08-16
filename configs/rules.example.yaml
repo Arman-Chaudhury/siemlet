@@ -1,37 +1,50 @@
-# siemlet detection rules — target shape for the YAML rule-config milestone.
-# Only ssh-brute-force is wired up today (hardcoded in cmd/siemlet); this file
-# documents the intended schema for all five default rules.
+# siemlet detection rules.
+#
+# Threshold rules fire when `threshold` events of the listed `kinds` share the
+# same `key` (ip | user | host; default host) within `window`. Options:
+#   distinct: user        count distinct usernames instead of raw events
+#   user: root            only match events for this exact user
+#   outside_hours: "HH:MM-HH:MM"
+#                         only match outside this daily local-time range
+#                         (start > end wraps past midnight, e.g. "22:00-06:00")
+# `window` may be omitted when threshold is 1 (fires on every matching event).
+#
+# Sequence rules fire when an event of the second stage's kinds follows
+# >= `threshold` first-stage events with the same `key` within `window`.
+#
+# Event kinds: auth_fail, auth_success, invalid_user, sudo_command,
+# user_added, other.
+#
+# This file matches the built-in defaults; run with --rules to override them.
 
 rules:
   - name: ssh-brute-force
     kinds: [auth_fail, invalid_user]
-    key: ip            # window is tracked per source IP
+    key: ip
     threshold: 5
     window: 2m
 
   - name: password-spray
     kinds: [auth_fail, invalid_user]
     key: ip
-    distinct: user     # count distinct usernames, not raw events
+    distinct: user
     threshold: 5
     window: 10m
 
   - name: sudo-after-failures
-    sequence:          # fire when a sudo_command follows >=3 auth_fails
+    key: user
+    sequence:
       - kinds: [auth_fail]
         threshold: 3
         window: 10m
       - kinds: [sudo_command]
-    key: user
 
   - name: new-user-created
     kinds: [user_added]
     threshold: 1
-    window: 1s
 
   - name: off-hours-root
     kinds: [auth_success]
     user: root
     outside_hours: "08:00-20:00"
     threshold: 1
-    window: 1s
